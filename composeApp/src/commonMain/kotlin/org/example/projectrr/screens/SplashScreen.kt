@@ -20,8 +20,5 @@ fun SplashScreen(modifier: Modifier = Modifier){
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Image(
-            painter = painterResource(Res.drawable.compose_multiplatform)
-        )
     }
 }
