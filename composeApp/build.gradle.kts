@@ -77,6 +77,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.navigation.compose.jvmstubs)
     debugImplementation(compose.uiTooling)
+    implementation(libs.navigation.compose)
 }
 
