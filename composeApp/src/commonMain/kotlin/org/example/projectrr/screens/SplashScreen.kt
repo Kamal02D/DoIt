@@ -16,7 +16,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import org.example.projectrr.routing.Routes
 import org.jetbrains.compose.resources.painterResource
 import testkmp.composeapp.generated.resources.Res
 import testkmp.composeapp.generated.resources.checklist
@@ -35,11 +36,18 @@ import testkmp.composeapp.generated.resources.checklist_3
 
 
 @Composable
-fun SplashScreen(modifier: Modifier = Modifier){
+fun SplashScreen(navController: NavHostController,modifier: Modifier = Modifier){
     var animationProgress : Float by remember { mutableStateOf(0f) }
     val animationState: Float by animateFloatAsState(
         targetValue = animationProgress,
-        animationSpec = tween(durationMillis = 2500)
+        animationSpec = tween(durationMillis = 2500),
+        finishedListener = {
+            navController.navigate(Routes.Main){
+                popUpTo(Routes.Splash) {
+                    inclusive = true
+                }
+            }
+        }
     )
     LaunchedEffect(animationProgress) {
             animationProgress = 1f

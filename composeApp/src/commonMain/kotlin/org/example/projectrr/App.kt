@@ -10,6 +10,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import org.example.projectrr.routing.Routes
+import org.example.projectrr.screens.MainScreen
 import org.example.projectrr.screens.SplashScreen
 
 @Composable
@@ -22,7 +27,18 @@ fun App() {
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SplashScreen()
+            val navController = rememberNavController()
+            NavHost(
+                startDestination = Routes.Splash,
+                navController = navController
+            ){
+                composable<Routes.Splash> {
+                    SplashScreen(navController = navController)
+                }
+                composable<Routes.Main> {
+                    MainScreen()
+                }
+            }
         }
     }
 }
