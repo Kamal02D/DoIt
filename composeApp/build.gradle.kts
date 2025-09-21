@@ -8,6 +8,8 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+    id("androidx.room")
 }
 
 kotlin {
@@ -26,6 +28,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            linkerOpts.add("-lsqlite3")
         }
     }
     
@@ -33,6 +36,7 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.room.sqlite.wrapper)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -44,6 +48,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.jetbrains.compose.navigation)
+            implementation(libs.androidx.room.runtime)
+            implementation(libs.androidx.sqlite.bundled)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -79,6 +85,14 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.room.runtime.android)
     debugImplementation(compose.uiTooling)
+    add("kspAndroid", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    add("kspIosX64", libs.androidx.room.compiler)
+    add("kspIosArm64", libs.androidx.room.compiler)
 }
 
+room {
+    schemaDirectory("$projectDir/schemas")
+}

@@ -1,11 +1,18 @@
 package org.example.projectrr
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.Dispatchers
+import org.example.projectrr.data.getDatabaseBuilder
+import org.example.projectrr.data.getRoomDatabase
+import org.example.projectrr.models.Task
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -13,13 +20,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            val dbBuilder = remember {
+                getDatabaseBuilder(
+                    context = this.applicationContext
+                )
+            }
+
+            val db = remember {
+                getRoomDatabase(dbBuilder)
+            }
+            val dbDoa = db.getDao()
+            LaunchedEffect(Dispatchers.IO){
+                dbDoa.insert(
+                    Task(
+                        text = "gg",
+                        isDone = false
+                    )
+                )
+            }
             App()
         }
     }
-}
-
-@Preview
-@Composable
-fun AppAndroidPreview() {
-    App()
 }
