@@ -3,7 +3,6 @@ package org.example.projectrr.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,10 +25,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.projectrr.viewModels.MainScreenViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun MainScreen(
-    viewModel: MainScreenViewModel = viewModel{ MainScreenViewModel() },
+    viewModel: MainScreenViewModel =  koinViewModel<MainScreenViewModel>() ,
     modifier: Modifier=Modifier
 ){
     val uiState by viewModel.uiState.collectAsState()

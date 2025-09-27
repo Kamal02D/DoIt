@@ -3,13 +3,14 @@ package org.example.projectrr.data
 import androidx.room.RoomDatabase
 import androidx.room.Room
 import kotlinx.cinterop.ExperimentalForeignApi
+import org.example.projectrr.Constants
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
 
 
 fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
-    val dbFilePath = documentDirectory() + "/my_room.db"
+    val dbFilePath = documentDirectory() + "/${Constants.DataBase.STORAGE_FILE_NAME}.db"
     return Room.databaseBuilder<AppDatabase>(
         name = dbFilePath,
     )

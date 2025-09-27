@@ -1,19 +1,24 @@
 package org.example.projectrr.data
 
 import androidx.room.Dao
-import androidx.room.Insert
+import androidx.room.Delete
 import androidx.room.Query
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+import org.example.projectrr.Constants
 import org.example.projectrr.models.Task
 
 @Dao
 interface TodoDao {
-    @Insert
+    @Upsert
     suspend fun insert(item: Task)
 
-    @Query("SELECT count(*) FROM Task")
+    @Delete
+    suspend fun delete(item: Task)
+
+    @Query("SELECT count(*) FROM ${Constants.DataBase.Tables.Task.NAME}")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM Task")
-    fun getAllAsFlow(): Flow<List<Task>>
+    @Query("SELECT * FROM ${Constants.DataBase.Tables.Task.NAME}")
+    fun getAll(): Flow<List<Task>>
 }

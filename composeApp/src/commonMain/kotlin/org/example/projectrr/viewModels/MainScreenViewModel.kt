@@ -5,9 +5,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.example.projectrr.data.TodoDao
+import org.example.projectrr.models.Task
 import org.example.projectrr.states.MainScreenState
 
-class MainScreenViewModel : ViewModel() {
+class MainScreenViewModel(private val todoDao: TodoDao) : ViewModel() {
     private val _uiState = MutableStateFlow(MainScreenState(
         selectedIndex = 0
     ))
@@ -17,7 +19,7 @@ class MainScreenViewModel : ViewModel() {
 
 
 
-    // functions
+    // state functions
     fun setSelectedIndex(selectedIndex : Int){
         _uiState.update {
             it.copy(
