@@ -9,38 +9,35 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.projectrr.data.TodoDao
+import org.example.projectrr.enums.DialogType
 import org.example.projectrr.models.Task
 import org.example.projectrr.states.MainScreenState
 
 class MainScreenViewModel(private val todoDao: TodoDao) : ViewModel() {
     private val _uiState = MutableStateFlow(MainScreenState(
         selectedIndex = 0,
-        isNewTaskDialogOpen = false,
-        currentTaskToAdd = Task(
-            text = "",
-            isDone = false
-        )
+        isDialogOpen = false,
+        openDialogType = DialogType.ADD,
+        pendingForDeletionTask = null,
+        currentTaskToAddOrEdit = null
     ))
     val uiState: StateFlow<MainScreenState> = _uiState.asStateFlow()
     val allTasks: Flow<List<Task>> = todoDao.getAll()
 
     // database function
     fun insertCurrentTask(){
-        // insert to db
         viewModelScope.launch {
-            todoDao.insert(uiState.value.currentTaskToAdd)
+            uiState.value.currentTaskToAddOrEdit?.let {
+                todoDao.insert(it)
+            }
         }
-        // reset current task
-        _uiState.update {
-            it.copy(
-                currentTaskToAdd = Task(
-                    text = "",
-                    isDone = false
-                )
-            )
+    }
+    fun deletePendingTask(){
+        viewModelScope.launch {
+            uiState.value.pendingForDeletionTask?.let {
+                todoDao.delete(it)
+            }
         }
-        // close the dialog
-        setIsNewTaskDialogOpen(false)
     }
 
 
@@ -53,19 +50,32 @@ class MainScreenViewModel(private val todoDao: TodoDao) : ViewModel() {
             )
         }
     }
-    fun setIsNewTaskDialogOpen(isNewTaskDialogOpen : Boolean){
+    fun setIsDialogOpen(isNewTaskDialogOpen : Boolean){
         _uiState.update {
             it.copy(
-                isNewTaskDialogOpen = isNewTaskDialogOpen
+                isDialogOpen = isNewTaskDialogOpen
             )
         }
     }
-    fun setCurrentTaskText(text : String){
+    fun setOpenDialogType(openDialogType : DialogType){
         _uiState.update {
             it.copy(
-                currentTaskToAdd = it.currentTaskToAdd.copy(
-                    text = text
-                )
+                openDialogType = openDialogType
+            )
+        }
+    }
+    fun setPendingForDeletionTask(pendingForDeletionTask : Task?){
+        _uiState.update {
+            it.copy(
+                pendingForDeletionTask = pendingForDeletionTask
+            )
+        }
+    }
+
+    fun setCurrentTaskToAddOrEdit(currentTaskToAddOrEdit : Task?){
+        _uiState.update {
+            it.copy(
+                currentTaskToAddOrEdit = currentTaskToAddOrEdit
             )
         }
     }

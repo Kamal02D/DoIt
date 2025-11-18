@@ -13,4 +13,13 @@ data class Task (
     val text : String,
     @ColumnInfo(name = Constants.DataBase.Tables.Task.Columns.IS_DONE)
     val isDone : Boolean
-)
+){
+    companion object {
+        fun empty() : Task{
+            return Task(
+                text = "",
+                isDone = false
+            )
+        }
+    }
+}

@@ -39,12 +39,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import org.example.projectrr.enums.DialogType
+import org.example.projectrr.enums.IconButtonType
 import org.example.projectrr.models.Task
 import org.example.projectrr.viewModels.MainScreenViewModel
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import testkmp.composeapp.generated.resources.Res
 import testkmp.composeapp.generated.resources.add
+import testkmp.composeapp.generated.resources.pen
+import testkmp.composeapp.generated.resources.trash
 
 @Composable
 fun MainScreen(
@@ -57,7 +61,7 @@ fun MainScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color(0xF7FAFC))
+                .padding(all = 8.dp)
         ) {
             Text(
                 text = "DO IT",
@@ -71,22 +75,56 @@ fun MainScreen(
             )
             TasksListView(
                 modifier = modifier,
+                onEditTask = { taskId ->
+                    allTasks.firstOrNull { it.id == taskId }?.let { taskToEdit ->
+                        viewModel.setCurrentTaskToAddOrEdit(taskToEdit)
+                        viewModel.setOpenDialogType(DialogType.EDIT)
+                        viewModel.setIsDialogOpen(true)
+                    }
+                },
+                onDeleteTask = { taskId ->
+                    allTasks.firstOrNull { it.id == taskId }?.let { taskToDelete ->
+                        viewModel.setPendingForDeletionTask(taskToDelete)
+                        viewModel.setOpenDialogType(DialogType.DELETE)
+                        viewModel.setIsDialogOpen(true)
+                    }
+                },
                 tasks = allTasks
             )
         }
         additionFloatingButton(
             modifier = modifier
                 .align(Alignment.BottomEnd),
-            onClick = {viewModel.setIsNewTaskDialogOpen(true)}
+            onClick = {
+                viewModel.setCurrentTaskToAddOrEdit(Task.empty())
+                viewModel.setOpenDialogType(DialogType.ADD)
+                viewModel.setIsDialogOpen(true)
+            }
         )
     }
-    if (uiState.isNewTaskDialogOpen) {
-        InputDialog(
-            modifier = modifier,
-            currentTask = uiState.currentTaskToAdd,
-            setCurrentTaskText = viewModel::setCurrentTaskText,
-            onDismiss = {viewModel.setIsNewTaskDialogOpen(false)},
-            onAddTask = viewModel::insertCurrentTask
+    if (uiState.isDialogOpen) {
+        // executes when closing and when confirming
+        fun onDismiss(){
+            viewModel.setIsDialogOpen(false)
+            if(uiState.openDialogType == DialogType.DELETE){
+                viewModel.setPendingForDeletionTask(null)
+            }else{
+                viewModel.setCurrentTaskToAddOrEdit(null)
+            }
+        }
+
+        MDialog(
+            dialogType = uiState.openDialogType,
+            currentTask = uiState.currentTaskToAddOrEdit,
+            setCurrentTaskText = viewModel::setCurrentTaskToAddOrEdit,
+            onDismiss = {onDismiss()},
+            onConfirm = {
+                when(uiState.openDialogType){
+                    DialogType.ADD, DialogType.EDIT -> viewModel.insertCurrentTask()
+                    DialogType.DELETE -> viewModel.deletePendingTask()
+                }
+                onDismiss()
+            }
         )
     }
 }
@@ -176,18 +214,80 @@ fun TasksTabsView(
     }
 }
 @Composable
-fun TasksListView(modifier: Modifier=Modifier,tasks : List<Task>){
+fun TasksListView(tasks : List<Task>,
+                  onEditTask: (taskId : Long) -> Unit,
+                  onDeleteTask: (taskId : Long) -> Unit,
+                  modifier: Modifier=Modifier){
     Column (
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ){
         tasks.forEach { task ->
-            Text(task.text)
+            TaskItem(
+                task = task,
+                onEditTask = {onEditTask(task.id)},
+                onDeleteTask = {onDeleteTask(task.id)},
+            )
         }
     }
 }
 
+@Composable
+fun TaskItem(task : Task,
+             onEditTask : () -> Unit,
+             onDeleteTask : () -> Unit,
+             modifier: Modifier=Modifier){
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White)
+            .padding(all = 12.dp)
+    ){
+       Text(text = task.text,
+           modifier = Modifier
+               .fillMaxWidth(0.8f)
+       )
+        Row(
+            modifier = Modifier
+                .weight(1f),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            IconButton(
+                iconButtonType = IconButtonType.EDIT,
+                onAction = onEditTask
+            )
+            IconButton(
+                iconButtonType = IconButtonType.DELETE,
+                onAction = onDeleteTask
+            )
+
+        }
+    }
+}
+
+@Composable
+fun IconButton(iconButtonType: IconButtonType,
+               onAction : () -> Unit ,
+               modifier: Modifier=Modifier){
+    Image(
+        modifier = modifier
+            .size(30.dp)
+            .clickable {
+                    onAction()
+            },
+        painter = painterResource(
+            when (iconButtonType){
+                IconButtonType.DELETE -> Res.drawable.trash
+                IconButtonType.EDIT -> Res.drawable.pen
+            }
+        ),
+        contentDescription = null
+    )
+}
 
 @Composable
 fun additionFloatingButton(
@@ -211,12 +311,13 @@ fun additionFloatingButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun InputDialog(
-    modifier: Modifier = Modifier,
-    currentTask : Task,
-    setCurrentTaskText : (String) -> Unit,
+internal fun MDialog(
+    dialogType: DialogType,
+    currentTask : Task?,
+    setCurrentTaskText : (task : Task?) -> Unit,
     onDismiss : () -> Unit,
-    onAddTask : () -> Unit
+    onConfirm : () -> Unit,
+    modifier: Modifier = Modifier
 ){
     BasicAlertDialog(
         modifier = modifier
@@ -234,38 +335,65 @@ internal fun InputDialog(
                     Text(
                         modifier = Modifier
                             .padding(bottom = 16.dp),
-                        text = "New Task",
+                        text = when(dialogType){
+                            DialogType.ADD -> "New Task"
+                            DialogType.EDIT -> "Edit Task"
+                            DialogType.DELETE -> "Delete Task"
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp
                     )
-                    Text(
-                        text = "Task Name",
-                        fontWeight = FontWeight.Thin
-                    )
-                    TextField(
-                        modifier = Modifier
-                            .padding(bottom = 10.dp)
-                            .fillMaxWidth(),
-                        colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        value = currentTask.text,
-                        onValueChange = {
-                            setCurrentTaskText(it)
+                    if (dialogType != DialogType.DELETE) {
+                        if (currentTask != null) {
+                            Text(
+                                text = "Task Name",
+                                fontWeight = FontWeight.Thin
+                            )
+                            TextField(
+                                modifier = Modifier
+                                    .padding(bottom = 10.dp)
+                                    .fillMaxWidth(),
+                                colors = TextFieldDefaults.colors(
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                ),
+                                value = currentTask.text,
+                                onValueChange = {
+                                    setCurrentTaskText(
+                                        currentTask.copy(
+                                            text =  it
+                                        )
+                                    )
+                                }
+                            )
                         }
-                    )
+                    }else{
+                        Text(
+                            text = "Are you sure you want to delete?",
+                            modifier = Modifier
+                                .padding(bottom = 12.dp)
+                        )
+                    }
                     Button(
                         shape = RoundedCornerShape(6.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xff4299E1)
+                            containerColor = if (dialogType == DialogType.DELETE) {
+                                Color(0xffC70000)
+                            }else {
+                                Color(0xff4299E1)
+                            }
                         ),
                         modifier = Modifier
                             .fillMaxWidth(),
-                        onClick = onAddTask
+                        onClick = onConfirm
                     ){
                         Text(
-                            text = "Add Task"
+                            text =
+                                when(dialogType){
+                                    DialogType.ADD -> "Add"
+                                    DialogType.EDIT -> "Save"
+                                    DialogType.DELETE -> "Delete"
+                                }
                         )
                     }
                 }

@@ -20,24 +20,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val dbBuilder = remember {
-                getDatabaseBuilder(
-                    context = this.applicationContext
-                )
-            }
-
-            val db = remember {
-                getRoomDatabase(dbBuilder)
-            }
-            val dbDoa = db.getDao()
-            LaunchedEffect(Dispatchers.IO){
-                dbDoa.insert(
-                    Task(
-                        text = "gg",
-                        isDone = false
-                    )
-                )
-            }
             App()
         }
     }
