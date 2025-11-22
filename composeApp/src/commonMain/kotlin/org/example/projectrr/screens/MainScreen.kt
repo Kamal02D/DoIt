@@ -1,9 +1,11 @@
 package org.example.projectrr.screens
 
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -25,20 +28,31 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.launch
 import org.example.projectrr.enums.DialogType
 import org.example.projectrr.enums.IconButtonType
 import org.example.projectrr.enums.SelectedTab
@@ -50,6 +64,7 @@ import testkmp.composeapp.generated.resources.Res
 import testkmp.composeapp.generated.resources.add
 import testkmp.composeapp.generated.resources.pen
 import testkmp.composeapp.generated.resources.trash
+import kotlin.math.roundToInt
 
 @Composable
 fun MainScreen(
@@ -90,11 +105,22 @@ fun MainScreen(
                         viewModel.setIsDialogOpen(true)
                     }
                 },
-                tasks = allTasks.filter { task : Task ->
-                    when(uiState.selectedTab) {
+                tasks = allTasks.filter { task: Task ->
+                    when (uiState.selectedTab) {
                         SelectedTab.COMPLETE -> task.isDone
                         SelectedTab.INCOMPLETE -> !task.isDone
                     }
+                },
+                itemWidth = uiState.selectedTab,
+                onTaskDone = { task ->
+                    viewModel.upsert(task.copy(
+                        isDone = true
+                    ))
+                },
+                onTaskUnDone = { task ->
+                    viewModel.upsert(task.copy(
+                        isDone = false
+                    ))
                 }
             )
         }
@@ -194,10 +220,18 @@ fun TasksTabsView(
     selectedTab : SelectedTab,
     onSelectedTabChange : (SelectedTab) -> Unit,
     modifier: Modifier=Modifier){
+    val selectedTabIndex = if (selectedTab == SelectedTab.INCOMPLETE)  0 else 1
     TabRow(
-        selectedTabIndex = if (selectedTab == SelectedTab.INCOMPLETE)  0 else 1,
+        selectedTabIndex = selectedTabIndex,
         containerColor = Color.White,
-        indicator = {},
+        indicator = { tabPositions ->
+            if (selectedTabIndex < tabPositions.size) {
+                TabRowDefaults.Indicator(
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                    color = Color(0xff4299E1)
+                )
+            }},
+        divider = {},
         modifier = modifier
     ) {
         for (tab in SelectedTab.entries) {
@@ -223,6 +257,9 @@ fun TasksTabsView(
 }
 @Composable
 fun TasksListView(tasks : List<Task>,
+                  onTaskDone: (task : Task) -> Unit,
+                  onTaskUnDone: (task : Task) -> Unit,
+                  itemWidth : SelectedTab,
                   onEditTask: (taskId : Long) -> Unit,
                   onDeleteTask: (taskId : Long) -> Unit,
                   modifier: Modifier=Modifier){
@@ -232,47 +269,122 @@ fun TasksListView(tasks : List<Task>,
             .verticalScroll(rememberScrollState())
     ){
         tasks.forEach { task ->
-            TaskItem(
-                task = task,
-                onEditTask = {onEditTask(task.id)},
-                onDeleteTask = {onDeleteTask(task.id)},
-            )
+            key(task.id) {
+                TaskItem(
+                    task = task,
+                    currentTab = itemWidth,
+                    onEditTask = { onEditTask(task.id) },
+                    onDeleteTask = { onDeleteTask(task.id) },
+                    onTaskDone = {onTaskDone(task)},
+                    onTaskUnDone = {onTaskUnDone(task)},
+                )
+            }
         }
     }
 }
 
 @Composable
 fun TaskItem(task : Task,
+             onTaskDone : () -> Unit,
+             onTaskUnDone : () -> Unit,
+             currentTab : SelectedTab,
              onEditTask : () -> Unit,
              onDeleteTask : () -> Unit,
              modifier: Modifier=Modifier){
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
+    val maxSwipeThreshold = 0.6f
+
+    var itemWidth by remember{
+        mutableStateOf(0f)
+    }
+    val offset = remember {
+       Animatable(initialValue = 0f)
+    }
+    val scope = rememberCoroutineScope()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
             .padding(vertical = 6.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .padding(all = 12.dp)
-    ){
-       Text(text = task.text,
-           modifier = Modifier
-               .fillMaxWidth(0.8f)
-       )
+            .background( when(currentTab){
+                SelectedTab.INCOMPLETE -> Color.Green
+                SelectedTab.COMPLETE -> Color.Red
+            })
+            .offset { IntOffset(offset.value.roundToInt(),0) }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount ->
+                        val newOffset = when(currentTab){
+                            SelectedTab.INCOMPLETE -> (offset.value + dragAmount).coerceIn(0f, itemWidth*0.85f) // swipe right. not pass left
+                            SelectedTab.COMPLETE -> (offset.value + dragAmount).coerceIn(itemWidth*0.85f * -1, 0f)
+                        }
+                        scope.launch {
+                            offset.snapTo(targetValue = newOffset)
+                        }
+                    },
+                    onDragEnd = {
+                        when(currentTab){
+                            SelectedTab.INCOMPLETE -> {
+                                if (offset.value > maxSwipeThreshold*itemWidth){
+                                    scope.launch {
+                                        offset.snapTo(targetValue = itemWidth)
+                                        onTaskDone()
+                                    }
+                                }else{
+                                    scope.launch {
+                                        offset.snapTo(targetValue = 0f)
+                                    }
+                                }
+                            }
+                            SelectedTab.COMPLETE -> {
+                                if (offset.value < maxSwipeThreshold*itemWidth*-1){
+                                    scope.launch {
+                                        offset.snapTo(targetValue = itemWidth)
+                                        onTaskUnDone()
+                                    }
+                                }else{
+                                    scope.launch {
+                                        offset.snapTo(targetValue = 0f)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+            .onGloballyPositioned {
+                itemWidth = it.size.width.toFloat()
+            }
+    ) {
         Row(
-            modifier = Modifier
-                .weight(1f),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ){
-            IconButton(
-                iconButtonType = IconButtonType.EDIT,
-                onAction = onEditTask
-            )
-            IconButton(
-                iconButtonType = IconButtonType.DELETE,
-                onAction = onDeleteTask
-            )
+            modifier = modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White)
+                .padding(all = 12.dp)
 
+        ) {
+            Text(
+                text = task.text,
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+            )
+            Row(
+                modifier = Modifier
+                    .weight(1f),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    iconButtonType = IconButtonType.EDIT,
+                    onAction = onEditTask
+                )
+                IconButton(
+                    iconButtonType = IconButtonType.DELETE,
+                    onAction = onDeleteTask
+                )
+
+            }
         }
     }
 }

@@ -40,7 +40,11 @@ class MainScreenViewModel(private val todoDao: TodoDao) : ViewModel() {
             }
         }
     }
-
+    fun upsert(task : Task){
+        viewModelScope.launch {
+            todoDao.insert(task)
+        }
+    }
 
 
     // state functions
