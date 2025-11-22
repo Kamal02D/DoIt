@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import org.example.projectrr.enums.DialogType
 import org.example.projectrr.enums.IconButtonType
+import org.example.projectrr.enums.SelectedTab
 import org.example.projectrr.models.Task
 import org.example.projectrr.viewModels.MainScreenViewModel
 import org.jetbrains.compose.resources.painterResource
@@ -70,8 +71,8 @@ fun MainScreen(
             )
             ProgressView()
             TasksTabsView(
-                selectedIndex = uiState.selectedIndex,
-                onSelectedIndexChange = viewModel::setSelectedIndex
+                selectedTab = uiState.selectedTab,
+                onSelectedTabChange = viewModel::setSelectedTab
             )
             TasksListView(
                 modifier = modifier,
@@ -89,7 +90,12 @@ fun MainScreen(
                         viewModel.setIsDialogOpen(true)
                     }
                 },
-                tasks = allTasks
+                tasks = allTasks.filter { task : Task ->
+                    when(uiState.selectedTab) {
+                        SelectedTab.COMPLETE -> task.isDone
+                        SelectedTab.INCOMPLETE -> !task.isDone
+                    }
+                }
             )
         }
         additionFloatingButton(
@@ -185,27 +191,29 @@ fun ProgressView(modifier: Modifier=Modifier){
 
 @Composable
 fun TasksTabsView(
-    selectedIndex : Int,
-    onSelectedIndexChange : (Int) -> Unit,
+    selectedTab : SelectedTab,
+    onSelectedTabChange : (SelectedTab) -> Unit,
     modifier: Modifier=Modifier){
     TabRow(
-        selectedTabIndex = selectedIndex,
+        selectedTabIndex = if (selectedTab == SelectedTab.INCOMPLETE)  0 else 1,
         containerColor = Color.White,
         indicator = {},
         modifier = modifier
     ) {
-        val tabs = arrayOf("Incomplete","Complete")
-        for (tabIndex in tabs.indices) {
+        for (tab in SelectedTab.entries) {
             Tab(
-                selected = selectedIndex == tabIndex,
+                selected = selectedTab == tab,
                 selectedContentColor = Color.Black,
                 unselectedContentColor = Color.Gray,
                 onClick = {
-                    onSelectedIndexChange(tabIndex)
+                    onSelectedTabChange(tab)
                 },
                 text = {
                     Text(
-                        text = tabs[tabIndex],
+                        text = when (tab){
+                            SelectedTab.COMPLETE ->  "Complete"
+                            SelectedTab.INCOMPLETE -> "Incomplete"
+                        },
                         maxLines = 2
                     )
                 }

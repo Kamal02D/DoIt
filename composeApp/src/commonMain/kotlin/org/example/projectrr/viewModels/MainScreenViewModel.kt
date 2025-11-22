@@ -10,12 +10,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.projectrr.data.TodoDao
 import org.example.projectrr.enums.DialogType
+import org.example.projectrr.enums.SelectedTab
 import org.example.projectrr.models.Task
 import org.example.projectrr.states.MainScreenState
 
 class MainScreenViewModel(private val todoDao: TodoDao) : ViewModel() {
     private val _uiState = MutableStateFlow(MainScreenState(
-        selectedIndex = 0,
+        selectedTab = SelectedTab.INCOMPLETE,
         isDialogOpen = false,
         openDialogType = DialogType.ADD,
         pendingForDeletionTask = null,
@@ -43,10 +44,10 @@ class MainScreenViewModel(private val todoDao: TodoDao) : ViewModel() {
 
 
     // state functions
-    fun setSelectedIndex(selectedIndex : Int){
+    fun setSelectedTab(selectedTab : SelectedTab){
         _uiState.update {
             it.copy(
-                selectedIndex = selectedIndex
+                selectedTab = selectedTab
             )
         }
     }
