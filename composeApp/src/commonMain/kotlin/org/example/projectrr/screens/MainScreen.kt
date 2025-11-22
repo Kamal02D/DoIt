@@ -84,7 +84,11 @@ fun MainScreen(
                 fontSize = 40.sp,
                 fontWeight = FontWeight.Bold
             )
-            ProgressView()
+            ProgressView(
+                tasksDoneCount = allTasks.filter { it.isDone }.size,
+                taskNotDoneCount = allTasks.filter { !it.isDone }.size,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
             TasksTabsView(
                 selectedTab = uiState.selectedTab,
                 onSelectedTabChange = viewModel::setSelectedTab
@@ -163,7 +167,14 @@ fun MainScreen(
 
 /// Composables
 @Composable
-fun ProgressView(modifier: Modifier=Modifier){
+fun ProgressView(
+    tasksDoneCount : Int,
+    taskNotDoneCount : Int,
+    modifier: Modifier=Modifier){
+    var progress = ((tasksDoneCount/(tasksDoneCount+taskNotDoneCount).toDouble())*100)
+    if (progress.isNaN()){
+        progress = 0f.toDouble()
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -181,7 +192,7 @@ fun ProgressView(modifier: Modifier=Modifier){
                 fontSize = 14.sp
             )
             Spacer(Modifier.weight(1f))
-            Text("3/5 done")
+            Text("$tasksDoneCount/${(taskNotDoneCount+tasksDoneCount)} done")
         }
         Row(
             modifier = Modifier
@@ -194,7 +205,7 @@ fun ProgressView(modifier: Modifier=Modifier){
                     .height(8.dp)
                     .fillMaxWidth(),
                 progress = {
-                    0.5f
+                   progress.toFloat() / 100f
                 },
             )
         }
@@ -204,7 +215,7 @@ fun ProgressView(modifier: Modifier=Modifier){
             horizontalArrangement = Arrangement.End
         ){
             Text(
-                text = "60%",
+                text = "${progress.toString(numOfDec = 1)}%",
                 modifier = Modifier
                     .padding(top = 8.dp),
                 fontSize = 21.sp,
@@ -520,4 +531,23 @@ internal fun MDialog(
             }
         }
     )
+}
+
+
+
+
+fun Double.toString(numOfDec: Int=1): String {
+    var stringDouble = this.toString()
+    if (stringDouble == "NAN"){
+        return "0"
+    }
+    val indexOfDot = stringDouble.indexOf(".")
+    if (indexOfDot != -1){
+        val indexOfDotPlusDec = indexOfDot + numOfDec + 1
+        stringDouble = stringDouble.substring(startIndex = 0,endIndex = indexOfDotPlusDec)
+        if (stringDouble.endsWith(".0")) {
+            stringDouble = stringDouble.replace(".0", "")
+        }
+    }
+    return stringDouble
 }
