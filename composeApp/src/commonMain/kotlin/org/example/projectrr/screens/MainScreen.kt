@@ -28,7 +28,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -116,15 +116,23 @@ fun MainScreen(
                     }
                 },
                 itemWidth = uiState.selectedTab,
-                onTaskDone = { task ->
-                    viewModel.upsert(task.copy(
-                        isDone = true
-                    ))
+                onTaskDone = { taskId ->
+                    allTasks.firstOrNull { it.id == taskId }?.let {
+                        viewModel.upsert(
+                            it.copy(
+                                isDone = true
+                            )
+                        )
+                    }
                 },
-                onTaskUnDone = { task ->
-                    viewModel.upsert(task.copy(
-                        isDone = false
-                    ))
+                onTaskUnDone = { taskId ->
+                    allTasks.firstOrNull { it.id == taskId }?.let {
+                        viewModel.upsert(
+                            it.copy(
+                                isDone = false
+                            )
+                        )
+                    }
                 }
             )
         }
@@ -179,13 +187,14 @@ fun ProgressView(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(15.dp))
-            .background(Color.Green)
+            .background(Color.White)
             .padding(15.dp)
 
     ){
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(vertical = 8.dp)
         ){
             Text(
                 text = "Progress",
@@ -201,6 +210,7 @@ fun ProgressView(
             LinearProgressIndicator(
                 drawStopIndicator = {},
                 gapSize = -(8.dp),
+                color = Color(0xff4299E1),
                 modifier = Modifier
                     .height(8.dp)
                     .fillMaxWidth(),
@@ -211,14 +221,16 @@ fun ProgressView(
         }
         Row(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+            ,
             horizontalArrangement = Arrangement.End
         ){
             Text(
                 text = "${progress.toString(numOfDec = 1)}%",
                 modifier = Modifier
                     .padding(top = 8.dp),
-                fontSize = 21.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -237,7 +249,7 @@ fun TasksTabsView(
         containerColor = Color.White,
         indicator = { tabPositions ->
             if (selectedTabIndex < tabPositions.size) {
-                TabRowDefaults.Indicator(
+                SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
                     color = Color(0xff4299E1)
                 )
@@ -268,8 +280,8 @@ fun TasksTabsView(
 }
 @Composable
 fun TasksListView(tasks : List<Task>,
-                  onTaskDone: (task : Task) -> Unit,
-                  onTaskUnDone: (task : Task) -> Unit,
+                  onTaskDone: (taskId : Long) -> Unit,
+                  onTaskUnDone: (taskId : Long) -> Unit,
                   itemWidth : SelectedTab,
                   onEditTask: (taskId : Long) -> Unit,
                   onDeleteTask: (taskId : Long) -> Unit,
@@ -286,8 +298,8 @@ fun TasksListView(tasks : List<Task>,
                     currentTab = itemWidth,
                     onEditTask = { onEditTask(task.id) },
                     onDeleteTask = { onDeleteTask(task.id) },
-                    onTaskDone = {onTaskDone(task)},
-                    onTaskUnDone = {onTaskUnDone(task)},
+                    onTaskDone = {onTaskDone(task.id)},
+                    onTaskUnDone = {onTaskUnDone(task.id)},
                 )
             }
         }
